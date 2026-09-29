@@ -101,21 +101,26 @@ public function panel(Panel $panel): Panel
 
 3. Run `php artisan filament:assets` to rebuild the Filament assets.
 
-### Changing a Pass State
+### State Transition Action Missing
 
-**Problem**: You need to activate, use, cancel, revoke, void, or expire a pass.
+**Problem**: There is no pass state transition button (e.g., "Activate") in the panel.
 
-**Solution**: `PassResource` is read-only and registers no state transition actions. Drive
-the change from your own application code through the core `aiarmada/ticketing` services,
-which own the allowed transitions, actor recording, and reason requirements. Confirm the
-pass's current status first:
+**Solution**: This is expected — the pass pages are read-only. Run transitions through the ticketing domain (`$pass->markActivated(); $pass->save();` or `RevokePassAction`). Verify the pass first:
+
+1. Verify the pass is in the correct previous state
+2. Check owner context — the pass must belong to the current owner scope
+
+### "Action not available" on Pass
+
+**Problem**: A domain transition throws because the pass's current state does not allow it.
+
+**Solution**: Verify the pass's current state:
 
 ```bash
-php artisan tinker --execute '$pass = \AIArmada\Ticketing\Models\Pass::find("pass-uuid"); echo $pass->status->value;'
+php artisan tinker --execute '$pass = \AIArmada\Ticketing\Models\Pass::find("pass-uuid"); echo $pass->status->getValue();'
 ```
 
-A pass status in `used`, `revoked`, `voided`, or `expired` is terminal and will not accept
-further transitions.
+Allowed transitions are documented in the [Usage Guide](04-usage.md#pass-state-transitions).
 
 ### Permission Denied
 
@@ -218,10 +223,9 @@ When reporting issues, include:
 - **Use** explicit owner context for cross-tenant operations
 
 ### State Actions
-- **Terminal** statuses cannot transition — issue a new pass instead
-- **Reasons** are required for most state transitions — always provide context
+- **Terminal** states cannot transition — create a new pass if needed
+- **Reasons** are optional on transitions (`markCancelled/markRevoked/markVoided`, `RevokePassAction`) — always provide context anyway
 - **Transfers** are logged immutably — no deletion of transfer records
-- The admin panel is read-only for pass state; drive transitions from application code
 
 ## Read next
 
